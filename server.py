@@ -7,6 +7,7 @@ import requests
 
 load_dotenv()
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
+PORT = int(os.environ.get('PORT') or 3001)
 
 app = Flask(__name__,
             static_url_path = None,
