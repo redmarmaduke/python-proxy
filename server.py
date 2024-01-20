@@ -7,7 +7,9 @@ import requests
 
 load_dotenv()
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
-PORT = int(os.environ.get('PORT') or 3001)
+port = int(os.environ.get('PORT') or 3001)
+
+supported_methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
 app = Flask(__name__,
             static_url_path = None,
@@ -40,7 +42,7 @@ def graphql(path):
     # remove host and add Authorization
     headers = {k:v for k,v in request.headers if k.lower() != 'host'}
     headers['Authorization'] = f'Bearer {GITHUB_TOKEN}'
-
+    print(headers)
     target_res = requests.request(
         # use client request method
         method = request.method,
@@ -74,16 +76,20 @@ def graphql(path):
       'Transfer-Encoding',
       'Upgrade'
     ]
-    # strip out Content-Encoding since flask decompresses data
+    
+    # strip out "any" Content-Encoding since flask decompresses data
     encoding_headers = [
         'Content-Encoding'
     ]
-
+    # DEPRECATED: iff Content-Type or Content-Encoding changes then a warning of
+    # code of 214 should be generated
+    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Warning
     headers_to_strip = hop_by_hop_headers + encoding_headers
 
     headers_to_strip = list(map(lambda x : x.lower(), headers_to_strip))
 
-    # headers must be an array of tuples or mapping and not a dict
+    # headers must be an array of tuples or mapping
+    # for consumption by Response
     headers = [ (k,v) for k,v in target_res.raw.headers.items() if k.lower() not in headers_to_strip ]
     content_type = target_res.raw.headers['Content-Type']
 
@@ -94,7 +100,11 @@ def graphql(path):
                    content_type=content_type, direct_passthrough=False)
     return res
 
-@app.route('/', defaults={'path': ''}, methods=["GET", "POST"])
-@app.route('/<path>', methods=["GET", "POST"])
+@app.route('/', defaults={'path': ''}, methods=supported_methods)
+@app.route('/<path>', methods=supported_methods)
 def default(path):
+    # serve up all other routes
     return '<p>default</p>'
+
+if __name__ == '__main__':
+    app.run(debug=True, port=port)
